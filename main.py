@@ -1,10 +1,16 @@
 import os
 import random
+import time
 from typing import Dict, List
 import discord
 from dotenv import load_dotenv
+from uuid import uuid4
 
 load_dotenv()
+KICK_CHANCE = 0.025
+ROLE_MENTION_INCREASE = 0.3
+# we not even printing this out so even the owner doesn't know LOL
+RESET_PASSWORD = uuid4().hex[:12]
 
 class SillyBot(discord.Client):
     def __init__(self, *, intents: discord.Intents, **options) -> None:
@@ -28,7 +34,7 @@ class SillyBot(discord.Client):
             # sort by visual position
             channels.sort(key=lambda c: c.position)
             # send message to first channel it has access to
-            await channels[0].send("i am going to commit mischief")
+            # await channels[0].send("i am going to commit mischief")
 
     async def on_message(self, message: discord.Message):
         # don't respond to itself
@@ -44,7 +50,8 @@ class SillyBot(discord.Client):
         guild = message.guild
         members = guild.members
 
-        if message.content == "silly reset":
+        # no one can reset if they don't know password nyeheheh
+        if message.content == f"silly reset {RESET_PASSWORD}":
             # set everyone's nicknames to their default name
             for m in members:
                 if guild.owner_id == m.id or m.bot:
@@ -58,7 +65,30 @@ class SillyBot(discord.Client):
         if message.content == "silly kick":
             # kick a random person
             # ok this may be too harsh, not implementing
-            pass
+            guild.kick(m)
+            return
+        
+        # however, we'll implement roulette suicidal-kicking
+        if message.author.id != guild.owner.id and not message.author.bot:
+            chance = random.random()
+            mentioned_csgo = False
+            # if they mention bad role, they even more dead
+            if len(message.role_mentions) > 0 and message.role_mentions[0].name == "cartoon csgo":
+                chance -= ROLE_MENTION_INCREASE
+                mentioned_csgo = True
+            # countdown lmao
+            if chance <= KICK_CHANCE:
+                if mentioned_csgo:
+                    await message.channel.send("bro pinged cartoon csgo")
+                await message.channel.send("lmao")
+                for i in range(3, 0, -1):
+                    await message.channel.send(f"{i}")
+                    time.sleep(2)
+                await message.channel.send("bye.")
+                time.sleep(2)
+                print("we kickin", message.author)
+                await guild.kick(message.author)
+
         
         # give everyone a random name
         if self.all_names.get(guild.id, None) is None:
