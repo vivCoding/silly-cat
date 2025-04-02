@@ -10,12 +10,12 @@ class SillyBot(discord.Client):
     def __init__(self, *, intents: discord.Intents, **options) -> None:
         super().__init__(intents=intents, **options)
         print("lets go")
-        self.quiet = False
+        self.quiet = True
         # store all names once, as bot and owner names can start to become majority (since they are skipped over in assignment process)
-        self.all_names: List[str] = []
+        self.all_names: Dict[int, List[str]] = {}
 
     async def on_ready(self):
-        print(f"{self.user} has connected to the discord fellas")
+        # print(f"{self.user} has connected to the discord fellas")
         # send greeting msg to every connected server
         for guild in self.guilds:
             # get all text channels it has access to in server
@@ -28,7 +28,7 @@ class SillyBot(discord.Client):
             # sort by visual position
             channels.sort(key=lambda c: c.position)
             # send message to first channel it has access to
-            await channels[0].send("ladies and fellas, the silly cat is here")
+            await channels[0].send("i am going to commit mischief")
 
     async def on_message(self, message: discord.Message):
         # don't respond to itself
@@ -51,7 +51,7 @@ class SillyBot(discord.Client):
                     continue
                 print("- reseting", m.name, "from", m.nick)
                 await m.edit(nick=None)
-            self.all_names = []
+            self.all_names.pop(guild.id)
             await message.channel.send("mischief reset")
             return
         
@@ -61,16 +61,17 @@ class SillyBot(discord.Client):
             pass
         
         # give everyone a random name
-        if len(self.all_names) == 0:
-            self.all_names = [m.display_name for m in members]
-        random.shuffle(self.all_names)
-        print("names:", self.all_names)
+        if self.all_names.get(guild.id, None) is None:
+            self.all_names[guild.id] = [m.display_name for m in members]
+        random.shuffle(self.all_names[guild.id])
+        print("names:", self.all_names[guild.id])
         
         for idx, m in enumerate(members):
             if guild.owner_id == m.id or m.bot:
                 continue
-            print("- editing", m.name, "to", self.all_names[idx])
-            await m.edit(nick=self.all_names[idx])
+            new_name = self.all_names[guild.id][idx]
+            print("- editing", m.name, "to", new_name)
+            await m.edit(nick=new_name)
         if not self.quiet:
             await message.channel.send("mischief done")
 
