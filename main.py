@@ -7,10 +7,13 @@ from dotenv import load_dotenv
 from uuid import uuid4
 
 load_dotenv()
+
 KICK_CHANCE = 0.025
 ROLE_MENTION_INCREASE = 0.3
 # we not even printing this out so even the owner doesn't know LOL
-RESET_PASSWORD = uuid4().hex[:12]
+# could make this 6 characters, we'll just make it one character for ease
+RESET_PASSWORD = uuid4().hex[:1]
+BAD_ROLES_PINGS = ["cartoon csgo"]
 
 class SillyBot(discord.Client):
     def __init__(self, *, intents: discord.Intents, **options) -> None:
@@ -21,7 +24,7 @@ class SillyBot(discord.Client):
         self.all_names: Dict[int, List[str]] = {}
 
     async def on_ready(self):
-        # print(f"{self.user} has connected to the discord fellas")
+        print(f"{self.user} has connected to the discord fellas")
         # send greeting msg to every connected server
         for guild in self.guilds:
             # get all text channels it has access to in server
@@ -34,7 +37,7 @@ class SillyBot(discord.Client):
             # sort by visual position
             channels.sort(key=lambda c: c.position)
             # send message to first channel it has access to
-            # await channels[0].send("i am going to commit mischief")
+            await channels[0].send("i am going to commit mischief")
 
     async def on_message(self, message: discord.Message):
         # don't respond to itself
@@ -67,27 +70,31 @@ class SillyBot(discord.Client):
             # ok this may be too harsh, not implementing
             guild.kick(m)
             return
+
+        # owner and bots do not trigger mischief effects (safe guys)
+        if message.author.id == guild.owner.id or message.author.bot:
+            return
         
-        # however, we'll implement roulette suicidal-kicking
-        if message.author.id != guild.owner.id and not message.author.bot:
-            chance = random.random()
-            mentioned_csgo = False
-            # if they mention bad role, they even more dead
-            if len(message.role_mentions) > 0 and message.role_mentions[0].name == "cartoon csgo":
-                chance -= ROLE_MENTION_INCREASE
-                mentioned_csgo = True
+        # roulette suicidal-kicking
+        chance = random.random()
+        mentioned_role = False
+        # if they mention bad role, they even more dead
+        if len(message.role_mentions) > 0 and message.role_mentions[0].name in BAD_ROLES_PINGS:
+            chance -= ROLE_MENTION_INCREASE
+            mentioned_role = True
+        print(message.author.name, "had chance", chance, mentioned_role)
+        if chance <= KICK_CHANCE:
+            if mentioned_role:
+                await message.channel.send("bro pinged cartoon csgo")
             # countdown lmao
-            if chance <= KICK_CHANCE:
-                if mentioned_csgo:
-                    await message.channel.send("bro pinged cartoon csgo")
-                await message.channel.send("lmao")
-                for i in range(3, 0, -1):
-                    await message.channel.send(f"{i}")
-                    time.sleep(2)
-                await message.channel.send("bye.")
+            await message.channel.send("lmao")
+            for i in range(3, 0, -1):
+                await message.channel.send(f"{i}")
                 time.sleep(2)
-                print("we kickin", message.author)
-                await guild.kick(message.author)
+            await message.channel.send("bye.")
+            time.sleep(2)
+            print("we kickin", message.author.name)
+            await guild.kick(message.author)
 
         
         # give everyone a random name
