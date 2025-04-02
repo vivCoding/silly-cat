@@ -10,9 +10,6 @@ load_dotenv()
 
 KICK_CHANCE = 0.025
 ROLE_MENTION_INCREASE = 0.3
-# we not even printing this out so even the owner doesn't know LOL
-# could make this 6 characters, we'll just make it one character for ease
-RESET_PASSWORD = uuid4().hex[:1]
 BAD_ROLES_PINGS = ["cartoon csgo"]
 
 class SillyBot(discord.Client):
@@ -54,14 +51,17 @@ class SillyBot(discord.Client):
         members = guild.members
 
         # no one can reset if they don't know password nyeheheh
-        if message.content == f"silly reset {RESET_PASSWORD}":
+        # for now, make it just one letter
+        reset_password = random.choice('abcdef')[0]
+        print("hehe reset password is:", reset_password)
+        if message.content == f"silly reset {reset_password}":
             # set everyone's nicknames to their default name
             for m in members:
                 if guild.owner_id == m.id or m.bot:
                     continue
                 print("- reseting", m.name, "from", m.nick)
                 await m.edit(nick=None)
-            self.all_names.pop(guild.id)
+            self.all_names.pop(guild.id, None)
             await message.channel.send("mischief reset")
             return
         
